@@ -1,0 +1,6 @@
+{
+  "name": "Diseñador de Calabaza 3D Orgánica",
+  "description": "Generador y visor 3D de calabazas orgánicas y estación cafetera/té para impresión 3D: contenedor hueco con torre de posavasos, separadores para té/azúcar/creamer, tapa con manija de hojas, tallo salero/especiero desenroscable, cucharitas, base plana con cubierta TPU y exportación STL/OpenSCAD.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
