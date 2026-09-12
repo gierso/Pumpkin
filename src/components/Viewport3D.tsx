@@ -24,7 +24,8 @@ import {
   Sparkles,
   ShieldCheck,
   Disc,
-  Utensils
+  Utensils,
+  AlertTriangle
 } from 'lucide-react';
 
 interface Viewport3DProps {
@@ -92,6 +93,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const [cameraView, setCameraView] = useState<'perspective' | 'front' | 'bottom' | 'top'>('perspective');
   const [showGrid, setShowGrid] = useState(true);
   const [autoRotate, setAutoRotate] = useState(false);
+  const [webglError, setWebglError] = useState<string | null>(null);
 
   // Interaction tracking for smooth orbit controls
   const isDraggingRef = useRef(false);
@@ -99,13 +101,18 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const prevMouseRef = useRef({ x: 0, y: 0 });
   const cameraAnglesRef = useRef({ theta: Math.PI / 4, phi: Math.PI / 3, radius: 180 });
   const cameraTargetRef = useRef(new THREE.Vector3(0, 35, 0));
+  const autoRotateRef = useRef(autoRotate);
+
+  useEffect(() => {
+    autoRotateRef.current = autoRotate;
+  }, [autoRotate]);
 
   // Initialize Three.js Scene
   useEffect(() => {
     if (!containerRef.current || !canvasRef.current) return;
 
-    const width = containerRef.current.clientWidth;
-    const height = containerRef.current.clientHeight;
+    const width = Math.max(containerRef.current.clientWidth, 100);
+    const height = Math.max(containerRef.current.clientHeight, 100);
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x13171f);
@@ -114,13 +121,30 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     const camera = new THREE.PerspectiveCamera(42, width / height, 1, 2000);
     cameraRef.current = camera;
 
-    const renderer = new THREE.WebGLRenderer({
-      canvas: canvasRef.current,
-      antialias: true,
-      powerPreference: 'high-performance'
-    });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        canvas: canvasRef.current,
+        antialias: true,
+        powerPreference: 'high-performance'
+      });
+    } catch (err) {
+      console.error('WebGL high-performance failed, attempting fallback:', err);
+      try {
+        renderer = new THREE.WebGLRenderer({
+          canvas: canvasRef.current,
+          antialias: false,
+          powerPreference: 'default'
+        });
+      } catch (fallbackErr) {
+        console.error('All WebGL contexts failed:', fallbackErr);
+        setWebglError('No se pudo inicializar el motor gráfico 3D WebGL en este navegador o entorno.');
+        return;
+      }
+    }
+
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.localClippingEnabled = true;
@@ -205,12 +229,16 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
-      if (autoRotate) {
+      if (autoRotateRef.current) {
         cameraAnglesRef.current.theta += 0.005;
         updateCameraPos();
       }
 
-      renderer.render(scene, camera);
+      try {
+        renderer.render(scene, camera);
+      } catch (renderErr) {
+        console.warn('Render error in Viewport3D:', renderErr);
+      }
     };
     animate();
 
@@ -981,6 +1009,22 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           </button>
         </div>
       </div>
+
+      {/* WebGL Failure Fallback Card */}
+      {webglError && (
+        <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-50">
+          <div className="w-14 h-14 rounded-2xl bg-orange-950/80 border border-orange-500/50 flex items-center justify-center text-orange-400 mb-4 shadow-xl shadow-orange-950/50">
+            <AlertTriangle className="w-7 h-7" />
+          </div>
+          <h3 className="text-base font-bold text-slate-100 mb-1">Aceleración Gráfica 3D No Disponible</h3>
+          <p className="text-xs text-slate-400 max-w-sm mb-4 leading-relaxed">{webglError}</p>
+          <div className="text-[11px] text-slate-400 bg-slate-900 border border-slate-800 rounded-xl p-3.5 max-w-sm text-left space-y-1.5">
+            <div className="font-semibold text-slate-200">Cómo solucionarlo:</div>
+            <div>• Activa la opción <strong>Usar aceleración por hardware</strong> en los ajustes de tu navegador.</div>
+            <div>• Verifica que WebGL esté habilitado en tu navegador (chrome://gpu).</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

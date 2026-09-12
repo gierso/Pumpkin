@@ -45,10 +45,10 @@ export default function App() {
   // Core Geometry parameters (initialized with the station preset dimensions)
   const stationPreset = PUMPKIN_PRESETS.find((p) => p.id === 'estacion-cafetera');
   const [params, setParams] = useState<PumpkinParams>(
-    stationPreset ? stationPreset.params : DEFAULT_PUMPKIN_PARAMS
+    stationPreset ? { ...DEFAULT_PUMPKIN_PARAMS, ...stationPreset.params } : DEFAULT_PUMPKIN_PARAMS
   );
   const [supportSettings, setSupportSettings] = useState<SupportSettings>(
-    stationPreset ? stationPreset.supports : DEFAULT_SUPPORT_SETTINGS
+    stationPreset ? { ...DEFAULT_SUPPORT_SETTINGS, ...stationPreset.supports } : DEFAULT_SUPPORT_SETTINGS
   );
 
   // Organizer Station Specific Parameters
